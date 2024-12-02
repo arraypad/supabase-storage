@@ -85,14 +85,31 @@ export class Uploader {
    */
   async upload(request: FastifyRequest, options: UploaderOptions) {
     const version = await this.prepareUpload(options)
+    console.log('Upload request ', request, options);
 
     // When is an empty folder we restrict it to 0 bytes
     if (isEmptyFolder(options.objectName)) {
       options.fileSizeLimit = 0
     }
 
+    logSchema.error(logger, 'Upload request', {
+      type: 'event',
+      project: this.db.tenantId,
+      metadata: JSON.stringify({
+        options,
+      }),
+    })
+
     try {
       const file = await this.incomingFileInfo(request, options)
+
+      logSchema.error(logger, 'Got file info', {
+        type: 'event',
+        project: this.db.tenantId,
+        metadata: JSON.stringify({
+          file,
+        }),
+      })
 
       if (options.allowedMimeTypes && !isEmptyFolder(options.objectName)) {
         this.validateMimeType(file.mimeType, options.allowedMimeTypes)
@@ -111,6 +128,14 @@ export class Uploader {
         options.signal
       )
 
+      logSchema.error(logger, 'Object metadata', {
+        type: 'event',
+        project: this.db.tenantId,
+        metadata: JSON.stringify({
+          objectMetadata,
+        }),
+      })
+
       if (file.isTruncated()) {
         throw ERRORS.EntityTooLarge()
       }
@@ -122,6 +147,15 @@ export class Uploader {
         userMetadata: { ...file.userMetadata, ...(options.metadata || {}) },
       })
     } catch (e) {
+      console.error('Upload error', e);
+      logSchema.error(logger, 'Upload error', {
+        type: 'event',
+        error: e,
+        project: this.db.tenantId,
+        metadata: JSON.stringify({
+          reqId: this.db.reqId,
+        }),
+      })
       await ObjectAdminDelete.send({
         name: options.objectName,
         bucketId: options.bucketId,
