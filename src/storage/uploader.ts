@@ -85,31 +85,17 @@ export class Uploader {
    */
   async upload(request: FastifyRequest, options: UploaderOptions) {
     const version = await this.prepareUpload(options)
-    console.log('Upload request ', request, options);
+    console.log('Upload request start');
 
     // When is an empty folder we restrict it to 0 bytes
     if (isEmptyFolder(options.objectName)) {
       options.fileSizeLimit = 0
     }
 
-    logSchema.error(logger, 'Upload request', {
-      type: 'event',
-      project: this.db.tenantId,
-      metadata: JSON.stringify({
-        options,
-      }),
-    })
-
     try {
       const file = await this.incomingFileInfo(request, options)
 
-      logSchema.error(logger, 'Got file info', {
-        type: 'event',
-        project: this.db.tenantId,
-        metadata: JSON.stringify({
-          file,
-        }),
-      })
+      console.log('Got file info', file);
 
       if (options.allowedMimeTypes && !isEmptyFolder(options.objectName)) {
         this.validateMimeType(file.mimeType, options.allowedMimeTypes)
@@ -128,13 +114,8 @@ export class Uploader {
         options.signal
       )
 
-      logSchema.error(logger, 'Object metadata', {
-        type: 'event',
-        project: this.db.tenantId,
-        metadata: JSON.stringify({
-          objectMetadata,
-        }),
-      })
+      console.log('Got object metadata', objectMetadata);
+
 
       if (file.isTruncated()) {
         throw ERRORS.EntityTooLarge()
@@ -148,14 +129,6 @@ export class Uploader {
       })
     } catch (e) {
       console.error('Upload error', e);
-      logSchema.error(logger, 'Upload error', {
-        type: 'event',
-        error: e,
-        project: this.db.tenantId,
-        metadata: JSON.stringify({
-          reqId: this.db.reqId,
-        }),
-      })
       await ObjectAdminDelete.send({
         name: options.objectName,
         bucketId: options.bucketId,
@@ -193,18 +166,7 @@ export class Uploader {
           forUpdate: true,
           dontErrorOnEmpty: true,
         })
-        logSchema.error(logger, 'Current storage record', {
-          type: 'event',
-          project: this.db.tenantId,
-          metadata: JSON.stringify({
-            name: objectName,
-            bucketId: bucketId,
-            metadata: objectMetadata,
-            user_metadata: userMetadata,
-            obj: currentObj,
-            uploadType,
-          }),
-        })
+        console.log('Current storage record', currentObj);
 
         const isNew = !Boolean(currentObj)
 
@@ -217,16 +179,7 @@ export class Uploader {
           version,
           owner,
         })
-        logSchema.error(logger, 'New storage record', {
-          type: 'event',
-          project: this.db.tenantId,
-          metadata: JSON.stringify({
-            name: objectName,
-            bucketId: bucketId,
-            obj: newObject,
-            uploadType,
-          }),
-        })
+        console.log('New storage record', newObject);
 
         const events: Promise<unknown>[] = []
 
@@ -284,18 +237,7 @@ export class Uploader {
         return { obj: newObject, isNew, metadata: objectMetadata }
       })
     } catch (e) {
-      logSchema.error(logger, 'Upload or record upsert error', {
-        type: 'event',
-        error: e,
-        project: this.db.tenantId,
-        metadata: JSON.stringify({
-          name: objectName,
-          bucketId: bucketId,
-          metadata: objectMetadata,
-          reqId: this.db.reqId,
-          uploadType,
-        }),
-      })
+      console.error('Upload or record upsert error', e);
       await ObjectAdminDelete.send({
         name: objectName,
         bucketId: bucketId,
