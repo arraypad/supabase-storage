@@ -159,7 +159,7 @@ export class Uploader {
           forUpdate: true,
           dontErrorOnEmpty: true,
         })
-        logSchema.info(logger, 'Current storage record', {
+        logSchema.error(logger, 'Current storage record', {
           type: 'event',
           project: this.db.tenantId,
           metadata: JSON.stringify({
@@ -183,7 +183,7 @@ export class Uploader {
           version,
           owner,
         })
-        logSchema.info(logger, 'New storage record', {
+        logSchema.error(logger, 'New storage record', {
           type: 'event',
           project: this.db.tenantId,
           metadata: JSON.stringify({
