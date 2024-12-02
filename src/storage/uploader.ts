@@ -159,6 +159,18 @@ export class Uploader {
           forUpdate: true,
           dontErrorOnEmpty: true,
         })
+        logSchema.info(logger, 'Current storage record', {
+          type: 'event',
+          project: this.db.tenantId,
+          metadata: JSON.stringify({
+            name: objectName,
+            bucketId: bucketId,
+            metadata: objectMetadata,
+            user_metadata: userMetadata,
+            obj: currentObj,
+            uploadType,
+          }),
+        })
 
         const isNew = !Boolean(currentObj)
 
@@ -170,6 +182,16 @@ export class Uploader {
           user_metadata: userMetadata,
           version,
           owner,
+        })
+        logSchema.info(logger, 'New storage record', {
+          type: 'event',
+          project: this.db.tenantId,
+          metadata: JSON.stringify({
+            name: objectName,
+            bucketId: bucketId,
+            obj: newObject,
+            uploadType,
+          }),
         })
 
         const events: Promise<unknown>[] = []
@@ -228,6 +250,18 @@ export class Uploader {
         return { obj: newObject, isNew, metadata: objectMetadata }
       })
     } catch (e) {
+      logSchema.error(logger, 'Upload or record upsert error', {
+        type: 'event',
+        error: e,
+        project: this.db.tenantId,
+        metadata: JSON.stringify({
+          name: objectName,
+          bucketId: bucketId,
+          metadata: objectMetadata,
+          reqId: this.db.reqId,
+          uploadType,
+        }),
+      })
       await ObjectAdminDelete.send({
         name: objectName,
         bucketId: bucketId,
